@@ -19,6 +19,26 @@ pub trait Trait: system::Trait {
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
 }
 
+pub type DomainAddr = Vec<u8>;
+pub type DomainName = Vec<u8>;
+
+pub struct DomainDetail<AccountId> {
+	pub owner: AccountId,
+	pub expire: u32,
+	pub addr: DomainAddr,
+}
+
+pub struct Bid<AccountId> {
+	pub bidder: AccountId,
+	pub name: DomainName,
+	pub amount: u128,
+}
+
+pub struct BidInfo<AccountId, BlockNumber> {
+	pub bid: Bid<AccountId>,
+	pub end: BlockNumber,
+}
+
 // This module's storage items.
 decl_storage! {
 	trait Store for Module<T: Trait> as TemplateModule {
@@ -26,6 +46,10 @@ decl_storage! {
 		// Here we are declaring a StorageValue, `Something` as a Option<u32>
 		// `get(something)` is the default getter which returns either the stored `u32` or `None` if nothing stored
 		Something get(something): Option<u32>;
+
+		Domains get(domains): map DomainName => DomainDetail,
+		Owners get(owners): map T::AccountId => Vec<DomainName>,
+		Bids get(bids): map DomainName => BidInfo,
 	}
 }
 
