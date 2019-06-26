@@ -47,9 +47,9 @@ decl_storage! {
 		// `get(something)` is the default getter which returns either the stored `u32` or `None` if nothing stored
 		Something get(something): Option<u32>;
 
-		Domains get(domains): map DomainName => DomainDetail,
+		Domains get(domains): map DomainName => DomainDetail<T::AccountId>,
 		Owners get(owners): map T::AccountId => Vec<DomainName>,
-		Bids get(bids): map DomainName => BidInfo,
+		Bids get(bids): map DomainName => BidInfo<T::AccountId, T::BlockNumber>,
 	}
 }
 
@@ -74,6 +74,36 @@ decl_module! {
 			// here we are raising the Something event
 			Self::deposit_event(RawEvent::SomethingStored(something, who));
 			Ok(())
+		}
+
+		pub fn bid(origin, name: DomainName, amount: u128) -> Result {
+			let who = ensure_signed(origin)?;
+
+			let best_bid = Bids::get(name);
+			if amount <= best_bid.amount {
+				return Err("bid amount too small")
+			}
+
+			let current_block_number = Number<T as system::Trait>::get();
+			let end = current_block_number.as_() + 1u64;
+			Bids::insert(name, BidInfo {
+				bid: Bid {
+					bidder: who,
+					name: DomainName,
+					amount: amount,
+				},
+				end: T::BlockNumber::sa(end),
+			});
+
+			Ok(())
+		}
+
+		pub fn update() {
+
+		}
+
+		pub fn transfer() {
+
 		}
 	}
 }
