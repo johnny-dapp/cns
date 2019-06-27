@@ -25,7 +25,7 @@ pub type DomainAddr = Vec<u8>;
 pub type DomainName = Vec<u8>;
 
 #[cfg_attr(feature = "std", derive(Debug))]
-#[derive(Clone, Encode, Decode, PartialEq, Eq)]
+#[derive(Clone, Encode, Decode, Default, PartialEq, Eq)]
 pub struct DomainDetail<AccountId> {
 	pub owner: AccountId,
 	pub expire: u32,
@@ -33,7 +33,7 @@ pub struct DomainDetail<AccountId> {
 }
 
 #[cfg_attr(feature = "std", derive(Debug))]
-#[derive(Clone, Encode, Decode, PartialEq, Eq)]
+#[derive(Clone, Encode, Decode, Default, PartialEq, Eq)]
 pub struct Bid<AccountId> {
 	pub bidder: AccountId,
 	pub name: DomainName,
@@ -41,7 +41,7 @@ pub struct Bid<AccountId> {
 }
 
 #[cfg_attr(feature = "std", derive(Debug))]
-#[derive(Clone, Encode, Decode, PartialEq, Eq)]
+#[derive(Clone, Encode, Decode, Default, PartialEq, Eq)]
 pub struct BidInfo<AccountId, BlockNumber> {
 	pub bid: Bid<AccountId>,
 	pub end: BlockNumber,
@@ -87,14 +87,14 @@ decl_module! {
 		pub fn bid(origin, name: DomainName, amount: u128) -> Result {
 			let who = ensure_signed(origin)?;
 
-			let best_bid = <Bids<T>>::get(name);
+			let best_bid = <Bids<T>>::get(name.clone());
 			if amount <= best_bid.bid.amount {
 				return Err("bid amount too small")
 			}
 
 			let current_block_number = <system::Module<T>>::block_number();
 			let end = current_block_number.as_() + 10u64;
-			<Bids<T>>::insert(name, BidInfo {
+			<Bids<T>>::insert(name.clone(), BidInfo {
 				bid: Bid {
 					bidder: who,
 					name: name,
