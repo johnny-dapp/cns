@@ -1,6 +1,7 @@
 use support::{decl_module, decl_storage, decl_event, StorageValue, StorageMap, dispatch::Result, Parameter, ensure};
 use runtime_primitives::traits::{CheckedAdd, CheckedMul, As};
 use system::ensure_signed;
+use rstd::result;
 
 pub trait Trait: cennzx_spot::Trait {
 	type Item: Parameter;
@@ -15,7 +16,7 @@ pub type PriceOf<T> = (AssetIdOf<T>, BalanceOf<T>);
 decl_storage! {
 	trait Store for Module<T: Trait> as XPay {
 		pub Items get(item): map T::ItemId => Option<T::Item>;
-		pub ItemOwners get(item_owner): map T::ItemId => Option<T::AccountId>;
+		pub ItemOwners get(item_owner): map T::ItemId => Option<Domain>;
 		pub ItemQuantities get(item_quantity): map T::ItemId => u32;
 		pub ItemPrices get(item_price): map T::ItemId => Option<PriceOf<T>>;
 		
@@ -27,10 +28,12 @@ decl_module! {
 	pub struct Module<T: Trait> for enum Call where origin: T::Origin {
 		fn deposit_event<T>() = default;
 
-		pub fn create_item(origin, quantity: u32, item: T::Item, price_asset_id: AssetIdOf<T>, price_amount: BalanceOf<T>) -> Result {
+		pub fn create_item(origin, domain: Domain, quantity: u32, item: T::Item, price_asset_id: AssetIdOf<T>, price_amount: BalanceOf<T>) -> Result {
 			let origin = ensure_signed(origin)?;
 
 			let item_id = Self::next_item_id();
+
+			Self::ensure_ownwer(&domain, &origin)?;
 
 			// The last available id serves as the overflow mark and won't be used.
 			let next_item_id = item_id.checked_add(&1.into()).ok_or_else(||"No new item id is available.")?;
@@ -40,7 +43,7 @@ decl_module! {
 			let price = (price_asset_id, price_amount);
 
 			<Items<T>>::insert(item_id.clone(), item.clone());
-			<ItemOwners<T>>::insert(item_id.clone(), origin.clone());
+			<ItemOwners<T>>::insert(item_id.clone(), domain);
 			<ItemQuantities<T>>::insert(item_id.clone(), quantity);
 			<ItemPrices<T>>::insert(item_id.clone(), price.clone());
 
@@ -93,25 +96,7 @@ decl_module! {
 
 			let total_price_amount = item_price.1.checked_mul(&As::sa(quantity as u64)).ok_or_else(||"Total price overflow")?;
 
-			if item_price.0 == paying_asset_id {
-				// Same asset, GA transfer
-
-				ensure!(total_price_amount < max_total_paying_amount, "User paying price too low");
-
-				<generic_asset::Module<T>>::make_transfer_with_event(&item_price.0, &origin, &seller, total_price_amount)?;
-			} else {
-				// Different asset, CENNZX-Spot transfer
-
-				<cennzx_spot::Module<T>>::make_asset_swap_output(
-					&origin,             	// buyer
-					&seller,             	// recipient
-					&paying_asset_id,  		// asset_sold
-					&item_price.0,       	// asset_bought
-					item_price.1,       	// buy_amount
-					max_total_paying_amount,  // max_paying_amount
-					<cennzx_spot::Module<T>>::fee_rate() // fee_rate
-				)?;
-			}
+			Self::make_transfer(origin, paying_asset_id, total_price_amount, seller, item_price.0, item_price.1)?;
 
 			<ItemQuantities<T>>::insert(item_id.clone(), new_quantity);
 
@@ -119,6 +104,16 @@ decl_module! {
 
 			Ok(())
 		}
+	}
+
+	pub fn transfer(
+		origin,
+		from_asset: AssetIdOf<T>,
+		from_amount: BalanceOf<T>,
+		to_domain: Domain,
+		to_asset: AssetIdOf<T>,
+		to_amount: BalanceOf<T>) {
+
 	}
 }
 
@@ -141,3 +136,43 @@ decl_event!(
 		ItemSold(AccountId, ItemId, u32),
 	}
 );
+
+impl<T: Trait> Module<T> {
+	fn ensure_ownwer(domain: &Domain, owner: &T::AccountId) -> Result {
+		// TODO
+		return Err("err");
+	}
+
+	fn resolve_domain(domain: &Domain) -> result::Result<T::AccountId, &'static str> {
+		// TODO
+		return Err("err");
+	}
+
+	fn make_transfer(
+		from: &T::AccountId,
+		from_asset: AssetIdOf<T>,
+		from_amount: BalanceOf<T>,
+		to_domain: &Domain,
+		to_asset: AssetIdOf<T>,
+		to_amount: BalanceOf<T>
+	) -> Result {
+		let to_account = Self::resolve_domain(domain)?;
+		if from_asset == to_asset {
+				// Same asset, GA transfer
+
+				<generic_asset::Module<T>>::make_transfer_with_event(&from_asset, &from, &to_account, to_amount)?;
+			} else {
+				// Different asset, CENNZX-Spot transfer
+
+				<cennzx_spot::Module<T>>::make_asset_swap_output(
+					&from,            // buyer
+					&to_account,      // recipient
+					&from_asset,  		// asset_sold
+					&to_asset,       	// asset_bought
+					to_amount,       	// buy_amount
+					from_amount,  		// max_paying_amount
+					<cennzx_spot::Module<T>>::fee_rate() // fee_rate
+				)?;
+			}
+	}
+}
