@@ -8,8 +8,10 @@
 /// For more guidance on Substrate modules, see the example module
 /// https://github.com/paritytech/substrate/blob/master/srml/example/src/lib.rs
 
-use support::{decl_module, decl_storage, decl_event, StorageValue, dispatch::Result};
+use support::{decl_module, decl_storage, decl_event, StorageValue, StorageMap, dispatch::Result};
 use system::ensure_signed;
+use parity_codec::{Decode, Encode};
+use runtime_primitives::traits::As;
 
 /// The module's configuration trait.
 pub trait Trait: system::Trait {
@@ -22,18 +24,24 @@ pub trait Trait: system::Trait {
 pub type DomainAddr = Vec<u8>;
 pub type DomainName = Vec<u8>;
 
+#[cfg_attr(feature = "std", derive(Debug))]
+#[derive(Clone, Encode, Decode, PartialEq, Eq)]
 pub struct DomainDetail<AccountId> {
 	pub owner: AccountId,
 	pub expire: u32,
 	pub addr: DomainAddr,
 }
 
+#[cfg_attr(feature = "std", derive(Debug))]
+#[derive(Clone, Encode, Decode, PartialEq, Eq)]
 pub struct Bid<AccountId> {
 	pub bidder: AccountId,
 	pub name: DomainName,
 	pub amount: u128,
 }
 
+#[cfg_attr(feature = "std", derive(Debug))]
+#[derive(Clone, Encode, Decode, PartialEq, Eq)]
 pub struct BidInfo<AccountId, BlockNumber> {
 	pub bid: Bid<AccountId>,
 	pub end: BlockNumber,
@@ -47,9 +55,9 @@ decl_storage! {
 		// `get(something)` is the default getter which returns either the stored `u32` or `None` if nothing stored
 		Something get(something): Option<u32>;
 
-		Domains get(domains): map DomainName => DomainDetail<T::AccountId>,
-		Owners get(owners): map T::AccountId => Vec<DomainName>,
-		Bids get(bids): map DomainName => BidInfo<T::AccountId, T::BlockNumber>,
+		Domains get(domains): map DomainName => DomainDetail<T::AccountId>;
+		Owners get(owners): map T::AccountId => Vec<DomainName>;
+		Bids get(bids): map DomainName => BidInfo<T::AccountId, T::BlockNumber>;
 	}
 }
 
@@ -79,17 +87,17 @@ decl_module! {
 		pub fn bid(origin, name: DomainName, amount: u128) -> Result {
 			let who = ensure_signed(origin)?;
 
-			let best_bid = Bids::get(name);
-			if amount <= best_bid.amount {
+			let best_bid = <Bids<T>>::get(name);
+			if amount <= best_bid.bid.amount {
 				return Err("bid amount too small")
 			}
 
-			let current_block_number = Number<T as system::Trait>::get();
-			let end = current_block_number.as_() + 1u64;
-			Bids::insert(name, BidInfo {
+			let current_block_number = <system::Module<T>>::block_number();
+			let end = current_block_number.as_() + 10u64;
+			<Bids<T>>::insert(name, BidInfo {
 				bid: Bid {
 					bidder: who,
-					name: DomainName,
+					name: name,
 					amount: amount,
 				},
 				end: T::BlockNumber::sa(end),
