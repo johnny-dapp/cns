@@ -12,6 +12,7 @@ use support::{decl_module, decl_storage, decl_event, StorageValue, StorageMap, d
 use system::ensure_signed;
 use parity_codec::{Decode, Encode};
 use runtime_primitives::traits::As;
+use rstd::prelude::*;
 
 /// The module's configuration trait.
 pub trait Trait: system::Trait {
