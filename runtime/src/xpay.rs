@@ -2,6 +2,7 @@ use support::{decl_module, decl_storage, decl_event, StorageValue, StorageMap, d
 use runtime_primitives::traits::{CheckedAdd, CheckedMul, As};
 use system::ensure_signed;
 use rstd::result;
+use rstd::vec::Vec;
 
 pub trait Trait: cennzx_spot::Trait {
 	type Item: Parameter;
@@ -12,6 +13,8 @@ pub trait Trait: cennzx_spot::Trait {
 pub type BalanceOf<T> = <T as generic_asset::Trait>::Balance;
 pub type AssetIdOf<T> = <T as generic_asset::Trait>::AssetId;
 pub type PriceOf<T> = (AssetIdOf<T>, BalanceOf<T>);
+
+type Domain = Vec<u8>;
 
 decl_storage! {
 	trait Store for Module<T: Trait> as XPay {
@@ -104,16 +107,17 @@ decl_module! {
 
 			Ok(())
 		}
-	}
 
-	pub fn transfer(
-		origin,
-		from_asset: AssetIdOf<T>,
-		from_amount: BalanceOf<T>,
-		to_domain: Domain,
-		to_asset: AssetIdOf<T>,
-		to_amount: BalanceOf<T>) {
+		pub fn transfer(
+			origin,
+			from_asset: AssetIdOf<T>,
+			from_amount: BalanceOf<T>,
+			to_domain: Domain,
+			to_asset: AssetIdOf<T>,
+			to_amount: BalanceOf<T>
+		) {
 
+		}
 	}
 }
 
@@ -156,7 +160,7 @@ impl<T: Trait> Module<T> {
 		to_asset: AssetIdOf<T>,
 		to_amount: BalanceOf<T>
 	) -> Result {
-		let to_account = Self::resolve_domain(domain)?;
+		let to_account = Self::resolve_domain(to_domain)?;
 		if from_asset == to_asset {
 				// Same asset, GA transfer
 
