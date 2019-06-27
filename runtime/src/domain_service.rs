@@ -57,7 +57,7 @@ decl_storage! {
 		Something get(something): Option<u32>;
 
 		Domains get(domains): map DomainName => Option<DomainDetail<T::AccountId, T::BlockNumber>>;
-		Owners get(owners): map T::AccountId => Vec<DomainName>;
+		Owners get(owners): map T::AccountId => Option<Vec<DomainName>>;
 		Bids get(bids): map DomainName => Option<BidInfo<T::AccountId, T::BlockNumber>>;
 	}
 }
@@ -127,6 +127,16 @@ decl_module! {
 				if who != domain_detail.owner {
 					return Err("not owner")
 				}
+
+				let owner_domains = if let Some(mut domain_names) = <Owners<T>>::take(who.clone()) {
+					if !domain_names.contains(&name) {
+						domain_names.push(name.clone());
+					}
+					domain_names
+				} else {
+					vec![name.clone()]
+				};
+				<Owners<T>>::insert(who.clone(), owner_domains);
 
 				<Domains<T>>::insert(name, DomainDetail {
 					owner: domain_detail.owner,
