@@ -150,8 +150,26 @@ decl_module! {
 			}
 		}
 
-		pub fn transfer() {
+		pub fn transfer(origin, name: DomainName, to: T::AccountId) -> Result {
+			let who = ensure_signed(origin)?;
 
+			let mut domain_names = <Owners<T>>::take(who.clone()).unwrap_or(vec![]);
+			if domain_names.is_empty() || !domain_names.contains(&name) {
+				return Err("does not own this domain")
+			}
+
+			domain_names = domain_names.into_iter().filter(|n| *n != name).collect();
+			<Owners<T>>::insert(who.clone(), domain_names);
+
+			// could not fail
+			let old_record = <Domains<T>>::take(name.clone()).unwrap();
+			<Domains<T>>::insert(name, DomainDetail {
+				owner: to,
+				expire: old_record.expire,
+				addr: old_record.addr,
+			});
+
+			Ok(())
 		}
 	}
 }
