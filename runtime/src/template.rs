@@ -27,10 +27,10 @@ pub type DomainName = Vec<u8>;
 
 #[cfg_attr(feature = "std", derive(Debug))]
 #[derive(Clone, Encode, Decode, Default, PartialEq, Eq)]
-pub struct DomainDetail<AccountId> {
+pub struct DomainDetail<AccountId, BlockNumber> {
 	pub owner: AccountId,
-	pub expire: u32,
-	pub addr: DomainAddr,
+	pub expire: BlockNumber,
+	pub addr: Option<DomainAddr>,
 }
 
 #[cfg_attr(feature = "std", derive(Debug))]
@@ -56,9 +56,9 @@ decl_storage! {
 		// `get(something)` is the default getter which returns either the stored `u32` or `None` if nothing stored
 		Something get(something): Option<u32>;
 
-		Domains get(domains): map DomainName => DomainDetail<T::AccountId>;
+		Domains get(domains): map DomainName => Option<DomainDetail<T::AccountId, T::BlockNumber>>;
 		Owners get(owners): map T::AccountId => Vec<DomainName>;
-		Bids get(bids): map DomainName => BidInfo<T::AccountId, T::BlockNumber>;
+		Bids get(bids): map DomainName => Option<BidInfo<T::AccountId, T::BlockNumber>>;
 	}
 }
 
@@ -88,33 +88,66 @@ decl_module! {
 		pub fn bid(origin, name: DomainName, amount: u128) -> Result {
 			let who = ensure_signed(origin)?;
 
-			let best_bid = <Bids<T>>::get(name.clone());
-			if amount <= best_bid.bid.amount {
-				return Err("bid amount too small")
+			if let Some(bid_info) = <Bids<T>>::get(name.clone()) {
+				if amount <= bid_info.bid.amount {
+					return Err("bid amount too small")
+				}
 			}
 
-			let current_block_number = <system::Module<T>>::block_number();
-			let end = current_block_number.as_() + 10u64;
+			let now = <system::Module<T>>::block_number();
+
 			<Bids<T>>::insert(name.clone(), BidInfo {
 				bid: Bid {
 					bidder: who,
 					name: name,
 					amount: amount,
 				},
-				end: T::BlockNumber::sa(end),
+				end: add_block_number_by(now, 10),
 			});
 
 			Ok(())
 		}
 
-		pub fn update() {
+		pub fn update(origin, name: DomainName, addr: Option<DomainAddr>) -> Result {
+			let domain_detail_record = {
+				if let Some(bid_info) = <Bids<T>>::take(name.clone()) {
+					//TODO: transfer money to pool
+					Some(DomainDetail {
+						owner: bid_info.bid.bidder,
+						expire: add_block_number_by(bid_info.end, 1000),
+						addr: None,
+					})
+				} else {
+					<Domains<T>>::get(name.clone())
+				}
+			};
 
+			if let Some(domain_detail) = domain_detail_record {
+				let who = ensure_signed(origin)?;
+				if who != domain_detail.owner {
+					return Err("not owner")
+				}
+
+				<Domains<T>>::insert(name, DomainDetail {
+					owner: domain_detail.owner,
+					expire: domain_detail.expire,
+					addr: addr,
+				});
+
+				Ok(())
+			} else {
+				Err("domain does not exist")
+			}
 		}
 
 		pub fn transfer() {
 
 		}
 	}
+}
+
+fn add_block_number_by<B: As<u64>>(block_number: B, by: u64) -> B {
+	B::sa(block_number.as_() + by)
 }
 
 decl_event!(
