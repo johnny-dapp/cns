@@ -43,7 +43,7 @@ pub use generic_asset;
 
 mod fee;
 
-mod template;
+mod domain_service;
 mod xpay;
 
 /// Opaque types. These are used by the CLI to instantiate machinery that don't need to know
@@ -237,7 +237,7 @@ impl cennzx_spot::Trait for Runtime {
 	type ExchangeAddressGenerator = ExchangeAddressGenerator<Self>;
 }
 
-impl template::Trait for Runtime {
+impl domain_service::Trait for Runtime {
 	type Event = Event;
 }
 
@@ -266,7 +266,7 @@ construct_runtime!(
 		Sudo: sudo,
 		Fees: fees::{Module, Call, Fee, Storage, Config<T>, Event<T>},
 		CennzxSpot: cennzx_spot::{Module, Call, Storage, Config<T>, Event<T>},
-		DomainService: template::{Module, Call, Storage, Event<T>},
+		DomainService: domain_service::{Module, Call, Storage, Event<T>},
 		XPay: xpay::{Module, Call, Storage, Event<T>},
 	}
 );

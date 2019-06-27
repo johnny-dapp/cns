@@ -3,10 +3,10 @@ use runtime_primitives::traits::{CheckedAdd, CheckedMul, As};
 use system::ensure_signed;
 use rstd::result;
 use rstd::vec::Vec;
-use crate::template::{self, DomainName};
+use crate::domain_service::{self, DomainName};
 use parity_codec::Decode;
 
-pub trait Trait: cennzx_spot::Trait + template::Trait {
+pub trait Trait: cennzx_spot::Trait + domain_service::Trait {
 	type Item: Parameter;
 	type ItemId: Parameter + CheckedAdd + Default + From<u8>;
 	type Event: From<Event<Self>> + Into<<Self as system::Trait>::Event>;
@@ -144,7 +144,7 @@ decl_event!(
 
 impl<T: Trait> Module<T> {
 	fn ensure_ownwer(domain: &DomainName, owner: &T::AccountId) -> Result {
-		let detail = template::Module::<T>::domains(domain).ok_or_else(|| "Domain not exist")?;
+		let detail = domain_service::Module::<T>::domains(domain).ok_or_else(|| "Domain not exist")?;
 		if *owner == detail.owner {
 			return Ok(());
 		}
@@ -152,7 +152,7 @@ impl<T: Trait> Module<T> {
 	}
 
 	fn resolve_domain(domain: &DomainName) -> result::Result<T::AccountId, &'static str> {
-		let detail = template::Module::<T>::domains(domain).ok_or_else(|| "Domain not exist")?;
+		let detail = domain_service::Module::<T>::domains(domain).ok_or_else(|| "Domain not exist")?;
 		let addr = detail.addr.ok_or_else(|| "Domain not published")?;
 		Decode::decode(&mut &addr[..]).ok_or_else(|| "Not address")
 	}

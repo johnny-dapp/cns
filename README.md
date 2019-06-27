@@ -75,4 +75,4 @@ Additional CLI usage options are available and may be shown by running `cargo ru
 
 # Create new module
 
-A [template module](runtime/src/template.rs) is provided which can be used as a start point for new module development.
+A [template module](runtime/src/domain_service.rs) is provided which can be used as a start point for new module development.
