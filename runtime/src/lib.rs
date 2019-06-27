@@ -266,7 +266,7 @@ construct_runtime!(
 		Sudo: sudo,
 		Fees: fees::{Module, Call, Fee, Storage, Config<T>, Event<T>},
 		CennzxSpot: cennzx_spot::{Module, Call, Storage, Config<T>, Event<T>},
-		TemplateModule: template::{Module, Call, Storage, Event<T>},
+		DomainService: template::{Module, Call, Storage, Event<T>},
 		XPay: xpay::{Module, Call, Storage, Event<T>},
 	}
 );
