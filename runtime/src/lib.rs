@@ -238,6 +238,7 @@ impl cennzx_spot::Trait for Runtime {
 }
 
 impl template::Trait for Runtime {
+	type Event = Event;
 }
 
 impl xpay::Trait for Runtime {
